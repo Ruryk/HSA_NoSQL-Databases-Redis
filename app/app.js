@@ -1,21 +1,22 @@
 const express = require('express');
-const redis = require('redis');
-const client = redis.createClient();
+const Redis = require('ioredis');
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
 
-client.on('connect', () => {
-    console.log('Connected to Redis');
-    // Setting the memory limit in Redis
-    // client.config('set', 'maxmemory', '100mb', (err, res) => {
-    //     if (err) throw err;
-    //     console.log('Maxmemory set to 100mb');
-    // });
+app.timeout = 5000; // Set timeout to 5000 milliseconds
+
+const redis = new Redis({
+    port: 6379,
+    host: 'redis-master',
 });
 
-client.on('error', (err) => {
+redis.on('connect', () => {
+    console.log('Connected to Redis');
+});
+
+redis.on('error', (err) => {
     console.error('Redis error:', err);
 });
 
@@ -45,7 +46,7 @@ class ProbabilisticCache {
     }
 }
 
-const probabilisticCache = new ProbabilisticCache(client, 0.5);
+const probabilisticCache = new ProbabilisticCache(redis, 0.5);
 
 // API endpoint for setting a value in the cache
 app.post('/cache', (req, res) => {
