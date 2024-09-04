@@ -1,0 +1,26 @@
+version: '3'
+services:
+  redis-master:
+    build:
+      context: ./redis-master
+    container_name: redis-master
+    ports:
+      - "6379:6379"
+
+  redis-slave:
+    build:
+      context: ./redis-slave
+    container_name: redis-slave
+    ports:
+      - "6380:6379"
+    depends_on:
+      - redis-master
+
+  node-app:
+    build: ./app
+    container_name: node-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis-master
+      - redis-slave

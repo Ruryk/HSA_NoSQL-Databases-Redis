@@ -1,0 +1,4 @@
+http://localhost:3000/cache/testKey GET
+http://localhost:3000/cache/testKey2 GET
+http://localhost:3000/cache POST {"key":"testKey","value":"RandomValue1"}
+http://localhost:3000/cache POST {"key":"testKey2","value":"RandomValue2"}
