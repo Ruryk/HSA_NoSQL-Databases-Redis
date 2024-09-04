@@ -27,44 +27,52 @@ class ProbabilisticCache {
         this.cacheProbability = cacheProbability;
     }
 
-    set(key, value, callback) {
-        // Generate a random number between 0 and 1
+    // Використання async/await для асинхронного коду
+    async set(key, value, ttl = 3600) {  // ttl в секундах, за замовчуванням 1 година
         const randomNum = Math.random();
-        // Cache the value only if the random number is less than the set probability
         if (randomNum < this.cacheProbability) {
-            this.client.set(key, value, callback);
-            console.log(`Cached key: ${key} with probability ${this.cacheProbability}`);
+            await this.client.set(key, value, 'EX', ttl);  // Встановлення ключа з тайм-аутом
+            console.log(`Cached key: ${key} with probability ${this.cacheProbability} and TTL ${ttl}`);
+            return 'Cached';
         } else {
             console.log(`Skipped caching key: ${key} with probability ${this.cacheProbability}`);
-            if (callback) callback(null, 'Skipped');
+            return 'Skipped';
         }
     }
 
-    get(key, callback) {
-        // Retrieve the value from cache
-        this.client.get(key, callback);
+    async get(key) {
+        return await this.client.get(key);
     }
 }
 
 const probabilisticCache = new ProbabilisticCache(redis, 0.5);
 
 // API endpoint for setting a value in the cache
-app.post('/cache', (req, res) => {
+app.post('/cache', async (req, res) => {
     const { key, value } = req.body;
-    probabilisticCache.set(key, value, (err, result) => {
-        if (err) return res.status(500).send(err);
+    try {
+        const result = await probabilisticCache.set(key, value, 3600);
         res.send(`Key: ${key}, Result: ${result}`);
-    });
+    } catch (err) {
+        console.error('Error setting cache:', err);
+        res.status(500).send('Error setting cache');
+    }
 });
 
 // API endpoint for retrieving a value from the cache
-app.get('/cache/:key', (req, res) => {
-    const { key } = req.params;
-    probabilisticCache.get(key, (err, value) => {
-        if (err) return res.status(500).send(err);
-        if (value == null) return res.status(404).send('Key not found');
-        res.send(`Key: ${key}, Value: ${value}`);
-    });
+app.get('/cache/:key', async (req, res) => {
+    const key = req.params.key;
+    try {
+        const value = await probabilisticCache.get(key);
+        if (value == null) {
+            res.status(404).send('Key not found');
+        } else {
+            res.send(`Key: ${key}, Value: ${value}`);
+        }
+    } catch (err) {
+        console.error('Error getting cache:', err);
+        res.status(500).send('Error getting cache');
+    }
 });
 
 app.listen(PORT, () => {
